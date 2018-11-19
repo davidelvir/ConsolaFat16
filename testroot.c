@@ -233,27 +233,39 @@ void fat_read_file(FILE *read, FILE *out,
         }
     }
 }
-void fat_read_dir(FILE *readD, unsigned long fat_start, unsigned long data_start, unsigned long cluster_size, unsigned short cluster)
+void fat_read_dir(FILE *readD, unsigned long data_start, unsigned long cluster_size, unsigned short cluster)
 {
-    Fat16Entry *dir;
+    Fat16Entry dir;
     Fat16Entry dir2;
+    Fat16Entry dir3;
     printf("Cluster %d\n",cluster);
     fseek(readD, data_start + cluster_size * (cluster - 2), SEEK_SET);
-    int tem = 0;
-    fread(&dir[tem], sizeof(Fat16Entry), 1, readD);
+    
+    //int tem = 0;
+    //printf("break 1\n");
+    fread(&dir, sizeof(Fat16Entry), 1, readD);
+    fread(&dir2, sizeof(Fat16Entry), 1, readD);
+    fread(&dir3, sizeof(Fat16Entry), 1, readD);
+
+    printf("Dir 1 name: %.8s\n",dir.filename);
+    printf("Dir 2 name: %.8s\n",dir2.filename);
+    printf("Dir 3 name: %.8s\n",dir3.filename);
+    /*printf("break 2\n");
     while (dir[tem].attributes != 0x00)
     {
         tem++;
+        printf("break 1\n");
         fread(&dir[tem], sizeof(Fat16Entry), 1, readD);
+        
     }
     for (int i = 0; i < tem; i++)
     {
-        printf("Dir %d name: %.8s\n", i, dir[i].filename);
-    }
+        printf("Dir %d name: %.8s\n", i, dir[tem].filename);
+    }*/
     printf("This is a dir!\n");
     printf("Read pointer3 at 0x%X\n", (unsigned int)ftell(readD));
 
-    rewind(fatStart);
+    //rewind(fatStart);
 }
 int main()
 {
@@ -358,7 +370,7 @@ int main()
                 //printf("hola\n");
                 fseek(fatStart, 0x1BE + (512 * pt[0].start_sector) + sizeof(Fat16BootSector) + 66, SEEK_SET);
                  printf("Fat start at %ld\n", ftell(fatStart));
-                fat_read_dir(root,ftell(fatStart),ftell(in),16384,testRead.starting_cluster);
+                fat_read_dir(read,ftell(in),16384,testRead.starting_cluster);
                 
             }
         }
@@ -368,6 +380,17 @@ int main()
             vivo = 0;
         }
     }
+    /*ls_l();
+    //findRoot();
+    //comienzo del fat
+
+    fseek(fatStart, 0x1BE + (512 * pt[0].start_sector) + sizeof(Fat16BootSector) + 66, SEEK_SET);
+    printf("Fat start at %ld\n", ftell(fatStart));
+    print_file_info(&testRead);
+    fat_read_file(read, a, ftell(fatStart), ftell(in),
+                  16384,
+                  testRead.starting_cluster,
+                  testRead.file_size);*/
     fclose(fatStart);
     fclose(root);
     fclose(in);
