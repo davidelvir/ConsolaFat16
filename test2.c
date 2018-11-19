@@ -108,7 +108,10 @@ Fat16BootSector bs;
 Fat16Entry entry;
 Fat16Entry testRead;
 Fat16Entry read2;
+Fat16Entry w;
 PartitionTable pt[4];
+FILE *write;
+char ibuffer[1048576];
 void findRoot()
 {
 
@@ -121,6 +124,44 @@ void findRoot()
     fseek(root, (bs.reserved_sectors - 1 + bs.fat_size_sectors * bs.number_of_fats) * bs.sector_size, SEEK_CUR);
 
     //printf("INicial root %d\n", (int)ftell(root));
+}
+void Fat_write(){
+    //write = fopen("test2.img","wb");
+    
+    if (rootdir != ftell(root))
+    {
+        printf("NOT IN ROOT!!\n");
+    }
+    else
+    {
+        int i;
+        in = root;
+        fread(&entry, sizeof(entry), 1, in);
+        while(entry.attributes != 0){
+            fread(&entry, sizeof(entry), 1, in);
+        }
+        int new_entry = (int)ftell(in);
+        memcpy(&(ibuffer[new_entry]), &w,sizeof(w));
+
+        write = fopen("test2.img","wb");
+        fwrite(ibuffer,1,sizeof(ibuffer),write);
+        fclose(write);
+
+        /*for (i = 0; i < bs.root_dir_entries; i++)
+        {
+
+            fread(&entry, sizeof(entry), 1, in);
+            
+            //print_file_info2(&entry);
+        }
+        fseek(write,ftell(in),SEEK_SET);
+        printf("Write pointer at 0x%X\n", (unsigned int)ftell(write));
+        //printf("Read pointer at 0x%X\n", (unsigned int)ftell(in));
+        
+        findRoot();*/
+        //printf("Write pointer at 0x%X\n", (unsigned int)ftell(write));
+        printf("Root pointer at 0x%X\n", (unsigned int)ftell(root));
+    }
 }
 void ls()
 {
@@ -152,7 +193,7 @@ void ls_l()
 {
     int i;
     in = root;
-    printf("Read pointer00 at 0x%X\n", (unsigned int)ftell(in));
+    //printf("Read pointer00 at 0x%X\n", (unsigned int)ftell(in));
     for (i = 0; i < bs.root_dir_entries; i++)
     {
 
@@ -164,8 +205,9 @@ void ls_l()
         print_file_info(&entry);
     }
 
-    //printf("Read pointer at 0x%X\n", (unsigned int)ftell(in));
+    printf("Root pointer  2 at 0x%X\n", (unsigned int)ftell(root));
     findRoot();
+    printf("Root pointer  3 at 0x%X\n", (unsigned int)ftell(root));
     //printf("Root pointer at 0x%X\n", (unsigned int)ftell(root));
 }
 int find_file(char *find)
@@ -361,11 +403,42 @@ void return_to_dir(FILE *readD, unsigned long data_start, unsigned long cluster_
 int main()
 {
 
-    fatStart = fopen("test.img", "rb");
-    root = fopen("test.img", "rb");
-    FILE *read = fopen("test.img", "rb");
+    unsigned char filename[8] = {'P','R','U','E','B','A',' ',' '};
+    unsigned char ext2[3] = {'T','X','T'};
+    unsigned char attributes = 0x20;
+    unsigned char reserved[10] = {' ',' ',' ',' ',' ',' ',' ',' ',' ',' '};
+    unsigned short modify_time = 2;
+    unsigned short modify_date = 2;
+    unsigned short starting_cluster = 30;
+    unsigned int file_size = 30;
+
+    fatStart = fopen("test2.img", "rb");
+    root = fopen("test2.img", "rb");
+    FILE *read = fopen("test2.img", "rb");
     findRoot();
     rootdir = ftell(root);
+
+    FILE *copy = fopen("test2.img","rb");
+    
+    
+
+    fread(ibuffer,sizeof(ibuffer),1,copy);
+    fclose(copy);
+    memcpy(w.filename,filename,sizeof(filename));
+    memcpy(w.ext,ext2,sizeof(ext2));
+    memcpy(&w.attributes,&attributes,sizeof(attributes));
+    memcpy(w.reserved,reserved,sizeof(reserved));
+    memcpy(&w.modify_time,&modify_time,sizeof(modify_time));
+    memcpy(&w.modify_date,&modify_date,sizeof(modify_date));
+    memcpy(&w.starting_cluster,&starting_cluster,sizeof(starting_cluster));
+    memcpy(&w.file_size,&file_size,sizeof(file_size));
+
+    //Fat_write();
+    //fwrite(&w,sizeof(Fat16Entry),1,write);
+    
+    //fclose(write);
+    findRoot();
+    //printf("Attribute %u\n",w.attributes);
     int vivo = 1;
     char word[256] = {};
     char cat[8] = {};
@@ -459,10 +532,7 @@ int main()
                     FILE *a = fopen("a.txt", "wb");
                     //printf("break 1\n");
                     fseek(fatStart, 0x1BE + (512 * pt[0].start_sector) + sizeof(Fat16BootSector) + 66, SEEK_SET);
-                    //printf("pseudo break 2\n");
-                    //printf("Fat start at %ld\n", ftell(fatStart));
-
-                    //printf("Fat start 2 %d\n",(int)ftell(fatStart));
+                    
                     fat_read_file(read, a, ftell(fatStart), ftell(in),
                                   16384,
                                   testRead.starting_cluster,
@@ -473,7 +543,7 @@ int main()
                 else
                 {
                     printf("Aqui va el otro cat\n");
-                    //findRoot();
+                    findRoot();
                 }
             }
             else
@@ -566,6 +636,7 @@ int main()
                   16384,
                   testRead.starting_cluster,
                   testRead.file_size);*/
+
     fclose(fatStart);
     fclose(root);
     fclose(in);
