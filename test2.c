@@ -232,7 +232,7 @@ void fat_read_file(FILE *read, FILE *out,
             cluster_left = cluster_size; // reset cluster byte counter
         }
     }
-      findRoot();
+    findRoot();
     //printf("ROOT after cat %d\n",(int)ftell(root));
 }
 void fat_read_dir(FILE *readD, unsigned long data_start, unsigned long cluster_size, unsigned short cluster)
@@ -241,32 +241,30 @@ void fat_read_dir(FILE *readD, unsigned long data_start, unsigned long cluster_s
     //printf("Cluster %d\n", cluster);
     fseek(readD, data_start + cluster_size * (cluster - 2), SEEK_SET);
     fread(&dir, sizeof(Fat16Entry), 1, readD);
-    while(dir.attributes != 0x00){
+    while (dir.attributes != 0x00)
+    {
         print_file_info(&dir);
         fread(&dir, sizeof(Fat16Entry), 1, readD);
     }
-    //int tem = 0;
-    //printf("break 1\n");
-   
-    
-
-    
-    /*printf("break 2\n");
-    while (dir[tem].attributes != 0x00)
+    /*printf("This is a dir!\n");
+    printf("Read pointer3 at 0x%X\n", (unsigned int)ftell(readD));*/
+}
+void move_to_dir(FILE *readD, unsigned long data_start, unsigned long cluster_size, unsigned short cluster)
+{
+    Fat16Entry dir;
+    //printf("Cluster %d\n", cluster);
+    fseek(readD, data_start + cluster_size * (cluster - 2), SEEK_SET);
+    fread(&dir, sizeof(Fat16Entry), 1, readD);
+    while (dir.attributes != 0x00)
     {
-        tem++;
-        printf("break 1\n");
-        fread(&dir[tem], sizeof(Fat16Entry), 1, readD);
-        
+        //print_file_info(&dir);
+        fread(&dir, sizeof(Fat16Entry), 1, readD);
     }
-    for (int i = 0; i < tem; i++)
-    {
-        printf("Dir %d name: %.8s\n", i, dir[tem].filename);
-    }*/
-    printf("This is a dir!\n");
+    //printf("This is a dir!\n");
     printf("Read pointer3 at 0x%X\n", (unsigned int)ftell(readD));
-
-    //rewind(fatStart);
+}
+void return_to_dir(){
+    
 }
 int main()
 {
@@ -287,7 +285,12 @@ int main()
     }
     while (vivo == 1)
     {
-        printf("%.8s :>", ftell(root)== rootdir ? "Root": (char *)testRead.filename);
+        for (int i = 0; i < 8; i++)
+        {
+            cat[i] = ' ';
+            cd[i] = ' ';
+        }
+        printf("%.8s :>", ftell(root) == rootdir ? "Root" : (char *)testRead.filename);
 
         fgets(word, sizeof(word), stdin);
         if (word[0] == 'l' && word[1] == 's' && word[2] == ' ' && word[3] == '-' && word[4] == 'l')
@@ -306,7 +309,9 @@ int main()
         {
             if (ftell(root) != rootdir)
             {
-                printf("NO ESTAS EN ROOT!\n");
+                fseek(fatStart, 0x1BE + (512 * pt[0].start_sector) + sizeof(Fat16BootSector) + 66, SEEK_SET);
+                printf("Fat start at %ld\n", ftell(fatStart));
+                fat_read_dir(read, ftell(in), 16384, testRead.starting_cluster);
             }
             else
             {
@@ -357,12 +362,12 @@ int main()
         }
         else if (word[0] == 'c' && word[1] == 'd')
         {
-            findRoot();
+            //findRoot();
             int tem = 3;
             int tem2 = 0;
             //vivo = 2;
             printf("cd root %d\n", (int)ftell(root));
-            while (tem < 11 && word[tem] != '.')
+            while (tem < 11)
             {
 
                 if (word[tem] == '\n')
@@ -378,16 +383,29 @@ int main()
                 tem++;
             }
             cd[7] = ' ';
-            for (int i = 0; i < 8; i++)
+            /*for (int i = 0; i < 8; i++)
             {
                 printf("%c, %d\n", cd[i], i);
-            }
-            if (find_file(cd) == 1)
+            }*/
+            if ((cd[0] == '.' && cd[1] == '.' && cd[2] == '/' && ftell(root) != rootdir) || (cd[0] == '.' && cd[1] == '.' && ftell(root) != rootdir))
             {
-                //printf("hola\n");
-                fseek(fatStart, 0x1BE + (512 * pt[0].start_sector) + sizeof(Fat16BootSector) + 66, SEEK_SET);
-                printf("Fat start at %ld\n", ftell(fatStart));
-                fat_read_dir(read, ftell(in), 16384, testRead.starting_cluster);
+                //printf("break 1\n");
+                findRoot();
+            }
+            else if ((cd[0] == '.' && cd[1] == '.' && cd[2] == '/' && ftell(root) == rootdir) || (cd[0] == '.' && cd[1] == '.' && ftell(root) == rootdir))
+            {
+                //printf("break 2\n");
+                findRoot();
+            }
+            else
+            {
+                if (find_file(cd) == 1)
+                {
+                    //printf("hola\n");
+                    fseek(fatStart, 0x1BE + (512 * pt[0].start_sector) + sizeof(Fat16BootSector) + 66, SEEK_SET);
+                    printf("Fat start at %ld\n", ftell(fatStart));
+                    move_to_dir(read, ftell(in), 16384, testRead.starting_cluster);
+                }
             }
         }
         else if (word[0] == 'e' && word[1] == 'x' && word[2] == 'i' && word[3] == 't')
